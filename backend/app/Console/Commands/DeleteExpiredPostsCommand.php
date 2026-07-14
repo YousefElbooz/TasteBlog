@@ -27,14 +27,16 @@ class DeleteExpiredPostsCommand extends Command
      */
     public function handle()
     {
-        $expiredPosts = Post::where('created_at', '<', Carbon::now()->subHours(24))->get();
+        // Find posts older than 1 minute
+        $expiredPosts = Post::where('created_at', '<', now()->subMinutes(1))->get();
         $count = $expiredPosts->count();
         
         foreach ($expiredPosts as $post) {
-            // Using soft delete as requested
-            $post->delete();
+            // Send it to the Database Queue!
+            \App\Jobs\DeletePostJob::dispatch($post);
         }
 
-        $this->info("Successfully deleted {$count} expired posts.");
+        $this->info("Successfully dispatched {$count} expired posts to the queue.");
     }
+
 }

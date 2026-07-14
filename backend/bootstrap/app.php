@@ -24,7 +24,10 @@ return Application::configure(basePath: dirname(__DIR__))
             \Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e,
             Request $request
         ){
+
             if($request->is('api/*')) {
+                    error_log("API Error Caught: " . $e->getMessage());
+
                 return response()->json([
                     'success' => false,
                     'message' => 'Resource not found.',
@@ -33,8 +36,10 @@ return Application::configure(basePath: dirname(__DIR__))
             }
         });
 
-        $exceptions->render(function (\Illuminate\Auth\Access\AuthorizationException $e, Request $request) {
+        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException $e, Request $request) {
         if ($request->is('api/*')) {
+            error_log("API Error Caught: " . $e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'message' => 'You do not have permission to perform this action.',
@@ -42,4 +47,30 @@ return Application::configure(basePath: dirname(__DIR__))
             ], 403);
         }
          });
+
+         $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException $e, Request $request) {
+            if ($request->is('api/*')) {
+                error_log("API Error Caught: " . $e->getMessage());
+    
+                return response()->json([
+                    'success' => false,
+                    'message' => 'The HTTP method used is not supported for this route.',
+                    'errors'  => null
+                ], 405);
+            }
+        });
+
+
+         $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, Request $request) {
+            if ($request->is('api/*')) {
+                error_log("API Error Caught: " . $e->getMessage());
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthenticated. Please log in.',
+                    'errors'  => null
+                ], 401);
+            }
+        });
+
     })->create();
