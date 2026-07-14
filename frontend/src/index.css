@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Geist", "Satoshi", "Outfit", "Cabinet Grotesk", sans-serif;
+  --color-zinc-950: #09090b;
+}
+
+body {
+  @apply bg-[#f9fafb] text-zinc-950 antialiased min-h-[100dvh];
+}
+
+/* Liquid Glass Refraction */
+.liquid-glass {
+  @apply backdrop-blur-md bg-white/60 border border-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_20px_40px_-15px_rgba(0,0,0,0.05)];
+}
+
+/* Premium Card Surfaces */
+.bento-card {
+  @apply bg-white rounded-[2.5rem] p-8 md:p-10 border border-slate-200/50 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)];
+}
