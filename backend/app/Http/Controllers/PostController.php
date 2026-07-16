@@ -9,15 +9,23 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use App\Http\Requests\Posts\StorePostRequest;
 use App\Http\Requests\Posts\UpdatePostRequest;
+use App\Http\Resources\PostResource;
+use App\Services\PostService;
 
 class PostController extends Controller
 {
+    protected $postService;
+
+    public function __construct(PostService $postService)
+    {
+        $this->postService = $postService;
+    }
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        return response()->json(Post::with(['author', 'tags', 'comments'])->latest()->get());
+        return PostResource::collection($this->postService->getAllPosts());
     }
 
     /**
@@ -25,22 +33,15 @@ class PostController extends Controller
      */
     public function store(StorePostRequest $request)
     {
-       
-        $post = Post::create([
+        $data = [
             'user_id' => Auth::guard('api')->id(),
             'title' => $request->title,
             'body' => $request->body,
-        ]);
+        ];
+        
+        $post = $this->postService->createPost($data, $request->tags ?? []);
 
-        $tagIds = [];
-        foreach ($request->tags as $tagName) {
-            $tag = Tag::firstOrCreate(['name' => $tagName]);
-            $tagIds[] = $tag->id;
-        }
-
-        $post->tags()->sync($tagIds);
-
-        return response()->json($post->load(['author', 'tags']), 201);
+        return (new PostResource($post))->response()->setStatusCode(201);
     }
 
     /**
@@ -48,11 +49,8 @@ class PostController extends Controller
      */
     public function show($id)
     {
-        $post = Post::with(['author', 'tags', 'comments.author'])->find($id);
-        if (!$post) {
-            return response()->json(['error' => 'Post not found'], 404);
-        }
-        return response()->json($post);
+        $post = $this->postService->getPostById($id);
+        return new PostResource($post);
     }
 
     /**
@@ -60,25 +58,13 @@ class PostController extends Controller
      */
     public function update(UpdatePostRequest $request, $id)
     {
-        $post = Post::find($id);
-        if (!$post) {
-            return response()->json(['error' => 'Post not found'], 404);
-        }
+        $post = $this->postService->getPostById($id);
         
         $this->authorize('update', $post);
 
-        $post->update($request->only(['title', 'body']));
+        $updatedPost = $this->postService->updatePost($id, $request->only(['title', 'body']), $request->tags);
 
-        if ($request->has('tags')) {
-            $tagIds = [];
-            foreach ($request->tags as $tagName) {
-                $tag = Tag::firstOrCreate(['name' => $tagName]);
-                $tagIds[] = $tag->id;
-            }
-            $post->tags()->sync($tagIds);
-        }
-
-        return response()->json($post->load(['author', 'tags']));
+        return new PostResource($updatedPost);
     }
 
     /**
@@ -86,13 +72,10 @@ class PostController extends Controller
      */
     public function destroy($id)
     {
-        $post = Post::find($id);
-        if (!$post) {
-            return response()->json(['error' => 'Post not found'], 404);
-        }
+        $post = $this->postService->getPostById($id);
         $this->authorize('delete', $post);
 
-        $post->delete();
+        $this->postService->deletePost($id);
 
         return response()->json(['message' => 'Post deleted successfully']);
     }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,10 +15,10 @@ use App\Traits\UploadsImages;
 
 class AuthController extends Controller
 {
+    use UploadsImages;
     /**
      * Register a new user.
      */
-    use UploadsImages;
     public function signup(SignupRequest $request)
     {
 
@@ -54,7 +55,7 @@ class AuthController extends Controller
      */
     public function me()
     {
-        return response()->json(Auth::guard('api')->user());
+        return new UserResource(Auth::guard('api')->user());
     }
 
     /**
@@ -73,10 +74,14 @@ class AuthController extends Controller
     protected function respondWithToken($token)
     {
         return response()->json([
-            'access_token' => $token,
-            'token_type' => 'bearer',
-            'expires_in' => Auth::guard('api')->factory()->getTTL() * 60,
-            'user' => Auth::guard('api')->user()
+            'status' => 'success',
+            'message' => 'User authenticated successfully',
+            'data' => [
+                'access_token' => $token,
+                'token_type' => 'bearer',
+                'expires_in' => Auth::guard('api')->factory()->getTTL() * 60,
+                'user' => new UserResource(Auth::guard('api')->user())
+            ]
         ]);
     }
 }

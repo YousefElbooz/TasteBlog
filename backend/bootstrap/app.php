@@ -13,7 +13,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->alias([
+            'admin' => \App\Http\Middleware\AdminMiddleware::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
@@ -70,6 +72,23 @@ return Application::configure(basePath: dirname(__DIR__))
                     'message' => 'Unauthenticated. Please log in.',
                     'errors'  => null
                 ], 401);
+            }
+        });
+
+        $exceptions->render(function (\Throwable $e, Request $request) {
+            if ($request->is('api/*')) {
+                // Ignore expected HTTP exceptions so they can be handled by other renderers or natively
+                if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface || $e instanceof \Illuminate\Validation\ValidationException || $e instanceof \Illuminate\Auth\AuthenticationException) {
+                    return null;
+                }
+
+                \Illuminate\Support\Facades\Log::error("Unhandled API Error: " . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'An unexpected server error occurred.',
+                    'error'  => config('app.debug') ? $e->getMessage() : null
+                ], 500);
             }
         });
 

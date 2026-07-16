@@ -25,4 +25,12 @@ Route::group(['middleware' => 'auth:api'], function () {
     Route::post('/posts/{id}/comments', [CommentController::class, 'store']);
     Route::put('/comments/{id}', [CommentController::class, 'update']);
     Route::delete('/comments/{id}', [CommentController::class, 'destroy']);
+
+    // Admin Routes
+    Route::group(['middleware' => 'admin', 'prefix' => 'admin'], function () {
+        Route::get('/users', [\App\Http\Controllers\Admin\UserController::class, 'index']);
+        Route::get('/users/{id}', [\App\Http\Controllers\Admin\UserController::class, 'show']);
+        Route::put('/users/{id}', [\App\Http\Controllers\Admin\UserController::class, 'update']);
+        Route::delete('/users/{id}', [\App\Http\Controllers\Admin\UserController::class, 'destroy']);
+    });
 });

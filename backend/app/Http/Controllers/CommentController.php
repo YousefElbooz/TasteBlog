@@ -9,26 +9,34 @@ use App\Models\Post;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use App\Http\Resources\CommentResource;
+use App\Services\CommentService;
+use App\Services\PostService;
 
 class CommentController extends Controller
 {
+    protected $commentService;
+    protected $postService;
+
+    public function __construct(CommentService $commentService, PostService $postService)
+    {
+        $this->commentService = $commentService;
+        $this->postService = $postService;
+    }
     /**
      * Store a newly created comment in storage.
      */
     public function store(StoreCommentRequest $request, $postId)
     {
-        $post = Post::find($postId);
-        if (!$post) {
-            return response()->json(['error' => 'Post not found'], 404);
-        }
+        $post = $this->postService->getPostById($postId);
 
-        $comment = Comment::create([
+        $comment = $this->commentService->createComment([
             'user_id' => Auth::guard('api')->id(),
             'post_id' => $post->id,
             'body' => $request->body,
         ]);
 
-        return response()->json($comment->load('author'), 201);
+        return (new CommentResource($comment->load('author')))->response()->setStatusCode(201);
     }
 
     /**
@@ -36,17 +44,13 @@ class CommentController extends Controller
      */
     public function update(UpdateCommentRequest $request, $id)
     {
-        $comment = Comment::find($id);
-        if (!$comment) {
-            return response()->json(['error' => 'Comment not found'], 404);
-        }
+        $comment = $this->commentService->getCommentById($id);
 
         $this->authorize('update', $comment);
-
     
-        $comment->update(['body' => $request->body]);
+        $updatedComment = $this->commentService->updateComment($id, ['body' => $request->body]);
 
-        return response()->json($comment->load('author'));
+        return new CommentResource($updatedComment->load('author'));
     }
 
     /**
@@ -54,16 +58,13 @@ class CommentController extends Controller
      */
     public function destroy($id)
     {
-        $comment = Comment::find($id);
-        if (!$comment) {
-            return response()->json(['error' => 'Comment not found'], 404);
-        }
+        $comment = $this->commentService->getCommentById($id);
 
         if ($comment->user_id !== Auth::guard('api')->id()) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        $comment->delete();
+        $this->commentService->deleteComment($id);
 
         return response()->json(['message' => 'Comment deleted successfully']);
     }
